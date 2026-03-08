@@ -35,6 +35,28 @@ if (typeof document !== "undefined") {
       .iims-bottomnav { display: flex !important; }
       .iims-page-wrap { padding-bottom: 72px !important; }
     }
+    .iims-sidebar  { display: flex; }
+    .iims-bottomnav { display: none; }
+    @media (max-width: 768px) {
+      .iims-sidebar   { display: none !important; }
+      .iims-bottomnav { display: flex !important; }
+      .iims-page-wrap { padding-bottom: 72px !important; }
+    }
+    .iims-hamburger { display: none; }
+    @media (max-width: 768px) {
+      .iims-hamburger { display: flex !important; }
+    }
+    @media (max-width: 768px) {
+      .iims-mobile-drawer {
+        position: fixed !important; top: 0; left: 0; bottom: 0;
+        z-index: 500; height: 100vh !important;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+      }
+      .iims-drawer-overlay {
+        display: block; position: fixed; inset: 0;
+        z-index: 499; background: rgba(0,0,0,0.55);
+      }
+    }
     .iims-bottomnav {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
       height: 62px; align-items: stretch;
@@ -479,7 +501,7 @@ export default function App() {
   const [allStudents,setAllStudents]       = useState({});
   const [rollToName,setRollToName]         = useState({});
   const [reviews,setReviews]               = useState([]);
-  const [sidebarOpen,setSidebarOpen]       = useState(true);
+  const [sidebarOpen,setSidebarOpen]       = useState(false);
   const [bidModal,setBidModal]             = useState(null);
   const [reviewModal,setReviewModal]       = useState(null);
   const [reviewDetailModal,setReviewDetailModal] = useState(null);
@@ -687,6 +709,8 @@ export default function App() {
 function MainLayout(props) {
   const { activePage,setActivePage,sidebarOpen,setSidebarOpen,
           onLogout,onlineCount,tokensLeft,user,theme,toggleTheme } = props;
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
   useEffect(()=>{
     document.body.style.background = C.bg;
     document.body.style.color = C.text;
@@ -695,21 +719,90 @@ function MainLayout(props) {
     r.setProperty("--scrollbar-thumb", C.scrollThumb||C.border);
     r.setProperty("--scrollbar-thumb-hover", C.scrollThumbHover||C.textDim);
   },[theme]);
+
   const nav=[
     {id:"dashboard",   icon:"⬡", label:"Dashboard"},
     {id:"courses",     icon:"📚",label:"Courses & Bids"},
     {id:"strategy",    icon:"🎯",label:"Bidding Strategy"},
     {id:"mybids",      icon:"🏆",label:"My Bid Results"},
     {id:"reviews",     icon:"⭐",label:"Reviews"},
-    {id:"leaderboard", icon:"🏆",label:"Leaderboard"},
+    {id:"leaderboard", icon:"🥇",label:"Leaderboard"},
   ];
-  const SW=sidebarOpen?220:68;
+  const SW = sidebarOpen ? 220 : 68;
 
-  // Set CSS vars for bottom nav theming
   useEffect(()=>{
     document.documentElement.style.setProperty("--bn-border", C.border);
     document.documentElement.style.setProperty("--bn-bg", C.surface);
   },[theme]);
+
+  // Close mobile drawer when page changes
+  useEffect(()=>{ setMobileDrawerOpen(false); },[activePage]);
+
+  const SidebarContent = ({ isMobile }) => (
+    <>
+      <div style={{ padding:"14px 14px", borderBottom:`1px solid ${C.border}`,
+        display:"flex", alignItems:"center", gap:10 }}>
+        <img src={IIM_LOGO} alt="IIM Shillong"
+          style={{ width:34, height:40, objectFit:"contain", flexShrink:0 }}/>
+        {(sidebarOpen || isMobile) && <div style={{ overflow:"hidden" }}>
+          <div style={{ fontSize:13,fontWeight:800,color:C.text,whiteSpace:"nowrap" }}>IIM Shillong</div>
+          <div style={{ fontSize:10,color:C.textSub }}>Elective Portal</div>
+        </div>}
+        {isMobile && (
+          <button onClick={()=>setMobileDrawerOpen(false)}
+            style={{ marginLeft:"auto",padding:"4px 8px",background:"transparent",
+              border:`1px solid ${C.border}`,borderRadius:6,color:C.textSub,cursor:"pointer",fontSize:13 }}>
+            ✕
+          </button>
+        )}
+      </div>
+      <nav style={{ flex:1, padding:"10px 8px", display:"flex", flexDirection:"column", gap:2 }}>
+        {nav.map(item=>(
+          <button key={item.id} onClick={()=>{ setActivePage(item.id); if(isMobile) setMobileDrawerOpen(false); }}
+            style={{ display:"flex",alignItems:"center",gap:10,
+              padding:"11px 12px",
+              borderRadius:8,border:"none",cursor:"pointer",
+              fontSize:13,fontWeight:500,fontFamily:"'Nunito',system-ui,sans-serif",
+              textAlign:"left",whiteSpace:"nowrap",
+              background:activePage===item.id?`${C.accent}18`:"transparent",
+              color:activePage===item.id?C.accent:C.textSub,
+              borderLeft:activePage===item.id?`3px solid ${C.accent}`:"3px solid transparent" }}>
+            <span style={{ fontSize:16,flexShrink:0 }}>{item.icon}</span>
+            {(sidebarOpen || isMobile) && <span>{item.label}</span>}
+          </button>
+        ))}
+      </nav>
+      <div style={{ padding:"10px 8px", borderTop:`1px solid ${C.border}` }}>
+        {(sidebarOpen || isMobile) && (
+          <div style={{ padding:"10px",background:C.bg,borderRadius:8,marginBottom:8 }}>
+            <div style={{ fontSize:12,fontWeight:700,color:C.text,marginBottom:2 }}>{user.name}</div>
+            <div style={{ fontSize:10,color:C.textSub,fontFamily:"monospace" }}>{user.roll}</div>
+            <div style={{ marginTop:8,display:"flex",gap:6,alignItems:"center" }}>
+              <div style={{ flex:1,height:4,background:C.border,borderRadius:2 }}>
+                <div style={{ height:"100%",width:`${(tokensLeft/TOTAL_TOKENS)*100}%`,
+                  background:tokensLeft<1000?C.red:C.green,borderRadius:2 }}/>
+              </div>
+              <span style={{ fontSize:10,color:C.textSub }}>{tokensLeft} pts</span>
+            </div>
+          </div>
+        )}
+        {!isMobile && (
+          <button onClick={()=>setSidebarOpen(o=>!o)}
+            style={{ width:"100%",padding:"8px",background:"transparent",
+              border:`1px solid ${C.border}`,borderRadius:8,color:C.textSub,
+              cursor:"pointer",fontSize:12,fontFamily:"'Nunito',system-ui,sans-serif" }}>
+            {sidebarOpen?"◀ Collapse":"▶"}
+          </button>
+        )}
+        {(sidebarOpen || isMobile) && (
+          <div style={{ marginTop:10, textAlign:"center", fontSize:10,
+            color:C.textDim, lineHeight:1.5 }}>
+            Made with <span style={{ color:"#e05d5d" }}>♥</span> in IIM Shillong
+          </div>
+        )}
+      </div>
+    </>
+  );
 
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.bg,
@@ -718,71 +811,45 @@ function MainLayout(props) {
       {/* ── Desktop Sidebar (hidden on mobile via CSS) ── */}
       <div className="iims-sidebar" style={{ width:SW, flexShrink:0, background:C.surface,
         borderRight:`1px solid ${C.border}`, flexDirection:"column",
-        transition:"width .25s", overflow:"hidden", position:"sticky", top:0, height:"100vh" }}>
-        <div style={{ padding:sidebarOpen?"18px 16px":"10px 8px",
-          borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
-          <img src={IIM_LOGO} alt="IIM Shillong"
-            style={{ width:sidebarOpen?36:32, height:sidebarOpen?42:38,
-              objectFit:"contain", flexShrink:0, transition:"all .25s" }}/>
-          {sidebarOpen&&<div style={{ overflow:"hidden" }}>
-            <div style={{ fontSize:13,fontWeight:800,color:C.text,whiteSpace:"nowrap" }}>IIM Shillong</div>
-            <div style={{ fontSize:10,color:C.textSub }}>Elective Portal</div>
-          </div>}
-        </div>
-        <nav style={{ flex:1, padding:"12px 8px", display:"flex", flexDirection:"column", gap:2 }}>
-          {nav.map(item=>(
-            <button key={item.id} onClick={()=>setActivePage(item.id)}
-              style={{ display:"flex",alignItems:"center",gap:10,
-                padding:sidebarOpen?"10px 10px":"10px",
-                borderRadius:8,border:"none",cursor:"pointer",
-                fontSize:13,fontWeight:500,fontFamily:"'Nunito',system-ui,sans-serif",
-                textAlign:"left",whiteSpace:"nowrap",
-                background:activePage===item.id?`${C.accent}18`:"transparent",
-                color:activePage===item.id?C.accent:C.textSub,
-                borderLeft:activePage===item.id?`2px solid ${C.accent}`:"2px solid transparent",
-                transition:"all .15s" }}>
-              <span style={{ fontSize:16,flexShrink:0 }}>{item.icon}</span>
-              {sidebarOpen&&<span>{item.label}</span>}
-            </button>
-          ))}
-        </nav>
-        <div style={{ padding:"12px 8px", borderTop:`1px solid ${C.border}` }}>
-          {sidebarOpen&&(
-            <div style={{ padding:"10px",background:C.bg,borderRadius:8,marginBottom:8 }}>
-              <div style={{ fontSize:12,fontWeight:700,color:C.text,marginBottom:2 }}>{user.name}</div>
-              <div style={{ fontSize:10,color:C.textSub,fontFamily:"monospace" }}>{user.roll}</div>
-              <div style={{ marginTop:8,display:"flex",gap:6,alignItems:"center" }}>
-                <div style={{ flex:1,height:4,background:C.border,borderRadius:2 }}>
-                  <div style={{ height:"100%",width:`${(tokensLeft/TOTAL_TOKENS)*100}%`,
-                    background:tokensLeft<1000?C.red:C.green,borderRadius:2,transition:"width .3s" }}/>
-                </div>
-                <span style={{ fontSize:10,color:C.textSub }}>{tokensLeft}</span>
-              </div>
-            </div>
-          )}
-          <button onClick={()=>setSidebarOpen(o=>!o)}
-            style={{ width:"100%",padding:"8px",background:"transparent",
-              border:`1px solid ${C.border}`,borderRadius:8,color:C.textSub,
-              cursor:"pointer",fontSize:12,fontFamily:"'Nunito',system-ui,sans-serif" }}>
-            {sidebarOpen?"◀ Collapse":"▶"}
-          </button>
-        </div>
+        overflow:"hidden", position:"sticky", top:0, height:"100vh" }}>
+        <SidebarContent isMobile={false}/>
       </div>
+
+      {/* ── Mobile Drawer Overlay ── */}
+      {mobileDrawerOpen && (
+        <div className="iims-drawer-overlay" onClick={()=>setMobileDrawerOpen(false)}/>
+      )}
+
+      {/* ── Mobile Drawer ── */}
+      {mobileDrawerOpen && (
+        <div className="iims-mobile-drawer" style={{ width:240, background:C.surface,
+          borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column" }}>
+          <SidebarContent isMobile={true}/>
+        </div>
+      )}
 
       {/* ── Right side ── */}
       <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
 
         {/* Topbar */}
         <div style={{ height:52, background:C.surface, borderBottom:`1px solid ${C.border}`,
-          display:"flex", alignItems:"center", padding:"0 12px", gap:8,
+          display:"flex", alignItems:"center", padding:"0 10px", gap:8,
           position:"sticky", top:0, zIndex:100 }}>
-          <div style={{ flex:1, fontSize:15, fontWeight:700, color:C.text,
+          {/* Hamburger — visible only on mobile */}
+          <button onClick={()=>setMobileDrawerOpen(o=>!o)}
+            className="iims-hamburger"
+            style={{ padding:"6px 8px",background:"transparent",flexShrink:0,
+              border:`1px solid ${C.border}`,borderRadius:6,
+              color:C.textSub,cursor:"pointer",fontSize:16,lineHeight:1,
+              display:"flex",alignItems:"center",justifyContent:"center" }}>
+            ☰
+          </button>
+          <div style={{ flex:1, fontSize:14, fontWeight:700, color:C.text,
             overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
             {nav.find(n=>n.id===activePage)?.label}
           </div>
           <div style={{ display:"flex",alignItems:"center",gap:4,flexShrink:0 }}>
-            <div style={{ width:7,height:7,borderRadius:"50%",background:C.green,
-              boxShadow:`0 0 6px ${C.green}` }}/>
+            <div style={{ width:7,height:7,borderRadius:"50%",background:C.green }}/>
             <span style={{ fontSize:11,color:C.textSub,whiteSpace:"nowrap" }}>{onlineCount} online</span>
           </div>
           <Tag color={tokensLeft<200?C.red:tokensLeft<600?C.yellow:C.blue}
