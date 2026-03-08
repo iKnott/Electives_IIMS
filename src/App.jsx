@@ -17,6 +17,38 @@ if (typeof document !== "undefined") {
     input, button, textarea, select { font-family: 'Nunito', 'Avenir Next', 'Avenir', system-ui, sans-serif !important; }
   `;
   document.head.prepend(styleEl);
+
+  // Mobile viewport + responsive CSS
+  const metaVP = document.createElement("meta");
+  metaVP.name = "viewport";
+  metaVP.content = "width=device-width, initial-scale=1, maximum-scale=1";
+  document.head.appendChild(metaVP);
+
+  const mobileCSS = document.createElement("style");
+  mobileCSS.textContent = `
+    *, *::before, *::after { box-sizing: border-box; }
+    body { overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+    .iims-sidebar  { display: flex; }
+    .iims-bottomnav { display: none; }
+    @media (max-width: 768px) {
+      .iims-sidebar   { display: none !important; }
+      .iims-bottomnav { display: flex !important; }
+      .iims-page-wrap { padding-bottom: 72px !important; }
+    }
+    .iims-bottomnav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+      height: 62px; align-items: stretch;
+      border-top: 1px solid var(--bn-border, #333);
+      background: var(--bn-bg, #1e1e1e);
+    }
+    .iims-bottomnav button {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 2px; border: none; background: transparent;
+      cursor: pointer; padding: 6px 2px; font-family: 'Nunito', sans-serif;
+    }
+  `;
+  document.head.appendChild(mobileCSS);
 }
 // ─── FIREBASE CONFIG ──────────────────────────────────────────
 const firebaseConfig = {
@@ -672,12 +704,20 @@ function MainLayout(props) {
     {id:"leaderboard", icon:"🏆",label:"Leaderboard"},
   ];
   const SW=sidebarOpen?220:68;
+
+  // Set CSS vars for bottom nav theming
+  useEffect(()=>{
+    document.documentElement.style.setProperty("--bn-border", C.border);
+    document.documentElement.style.setProperty("--bn-bg", C.surface);
+  },[theme]);
+
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.bg,
       fontFamily:"'Nunito',system-ui,sans-serif", color:C.text }}>
-      {/* Sidebar */}
-      <div style={{ width:SW, flexShrink:0, background:C.surface,
-        borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column",
+
+      {/* ── Desktop Sidebar (hidden on mobile via CSS) ── */}
+      <div className="iims-sidebar" style={{ width:SW, flexShrink:0, background:C.surface,
+        borderRight:`1px solid ${C.border}`, flexDirection:"column",
         transition:"width .25s", overflow:"hidden", position:"sticky", top:0, height:"100vh" }}>
         <div style={{ padding:sidebarOpen?"18px 16px":"10px 8px",
           borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
@@ -729,41 +769,44 @@ function MainLayout(props) {
         </div>
       </div>
 
-      {/* Right side */}
+      {/* ── Right side ── */}
       <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
+
         {/* Topbar */}
-        <div style={{ height:52,background:C.surface,borderBottom:`1px solid ${C.border}`,
-          display:"flex",alignItems:"center",padding:"0 24px",gap:14,
-          position:"sticky",top:0,zIndex:100 }}>
-          <div style={{ flex:1,fontSize:15,fontWeight:700,color:C.text }}>
+        <div style={{ height:52, background:C.surface, borderBottom:`1px solid ${C.border}`,
+          display:"flex", alignItems:"center", padding:"0 12px", gap:8,
+          position:"sticky", top:0, zIndex:100 }}>
+          <div style={{ flex:1, fontSize:15, fontWeight:700, color:C.text,
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
             {nav.find(n=>n.id===activePage)?.label}
           </div>
-          <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:4,flexShrink:0 }}>
             <div style={{ width:7,height:7,borderRadius:"50%",background:C.green,
               boxShadow:`0 0 6px ${C.green}` }}/>
-            <span style={{ fontSize:12,color:C.textSub }}>{onlineCount} online</span>
+            <span style={{ fontSize:11,color:C.textSub,whiteSpace:"nowrap" }}>{onlineCount} online</span>
           </div>
-          <Tag color={tokensLeft<200?C.red:tokensLeft<600?C.yellow:C.blue}>{tokensLeft} pts left</Tag>
+          <Tag color={tokensLeft<200?C.red:tokensLeft<600?C.yellow:C.blue}
+            style={{flexShrink:0,fontSize:11}}>{tokensLeft} pts</Tag>
           <button onClick={toggleTheme}
-            title={theme==="dark"?"Switch to light mode":"Switch to dark mode"}
-            style={{ padding:"6px 10px",background:"transparent",
+            style={{ padding:"6px 8px",background:"transparent",flexShrink:0,
               border:`1px solid ${C.border}`,borderRadius:6,
-              color:C.textSub,cursor:"pointer",fontSize:15,lineHeight:1,
+              color:C.textSub,cursor:"pointer",fontSize:14,lineHeight:1,
               display:"flex",alignItems:"center",justifyContent:"center" }}>
             {theme==="dark"?"☀️":"🌙"}
           </button>
           <button onClick={onLogout}
-            style={{ padding:"6px 14px",background:"transparent",
+            style={{ padding:"6px 10px",background:"transparent",flexShrink:0,
               border:`1px solid ${C.border}`,borderRadius:6,
-              color:C.textSub,cursor:"pointer",fontSize:12,fontFamily:"'Nunito',system-ui,sans-serif" }}>
+              color:C.textSub,cursor:"pointer",fontSize:11,fontFamily:"'Nunito',system-ui,sans-serif" }}>
             Sign out
           </button>
         </div>
 
-        {/* Auction timer always visible */}
+        {/* Auction timer */}
         <AuctionTimerBanner/>
 
-        <div style={{ flex:1, overflow:"auto" }}>
+        {/* Page content */}
+        <div className="iims-page-wrap" style={{ flex:1, overflow:"auto" }}>
           {activePage==="dashboard"   && <DashboardPage   {...props}/>}
           {activePage==="courses"     && <CoursesPage     {...props}/>}
           {activePage==="strategy"    && <StrategyPage    {...props}/>}
@@ -772,6 +815,19 @@ function MainLayout(props) {
           {activePage==="leaderboard" && <LeaderboardPage {...props} coursesVersion={props.coursesVersion}/>}
         </div>
       </div>
+
+      {/* ── Mobile Bottom Nav (hidden on desktop via CSS) ── */}
+      <nav className="iims-bottomnav">
+        {nav.map(item=>(
+          <button key={item.id} onClick={()=>setActivePage(item.id)}
+            style={{ color: activePage===item.id ? C.accent : C.textSub }}>
+            <span style={{ fontSize:18 }}>{item.icon}</span>
+            <span style={{ fontSize:9, fontWeight:600,
+              whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+              maxWidth:52 }}>{item.label}</span>
+          </button>
+        ))}
+      </nav>
 
       {props.bidModal&&(
         <BidModal course={props.bidModal} user={props.user}
@@ -875,7 +931,7 @@ function DashboardPage({ user, myBids, allBids, tokensLeft, strategyTotalPts, re
   }));
 
   return (
-    <div style={{ padding:"28px" }}>
+    <div style={{ padding:"clamp(12px, 4vw, 28px)" }}>
 
       {/* Welcome */}
       <div style={{ marginBottom:24 }}>
@@ -977,7 +1033,7 @@ function DashboardPage({ user, myBids, allBids, tokensLeft, strategyTotalPts, re
           </div>
 
           <div style={{ overflowX:"auto" }}>
-            <table style={{ width:"100%",borderCollapse:"collapse",minWidth:740 }}>
+            <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{ width:"100%",borderCollapse:"collapse",minWidth:740 }}>
               <thead>
                 <tr style={{ background:C.bg }}>
                   {[
@@ -1113,7 +1169,7 @@ function DashboardPage({ user, myBids, allBids, tokensLeft, strategyTotalPts, re
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       ) : (
@@ -1197,7 +1253,7 @@ function CoursesPage({ allBids,myBids,tokensLeft,reviews,setBidModal,setReviewDe
   }),[filterTerm,filterCluster,search]);
 
   return (
-    <div style={{ padding:"28px" }}>
+    <div style={{ padding:"clamp(12px, 4vw, 28px)" }}>
       <div style={{ display:"flex",gap:10,marginBottom:20,flexWrap:"wrap" }}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search courses…"
           style={{ flex:1,minWidth:180,padding:"9px 14px",background:C.surface,
@@ -1556,7 +1612,7 @@ function StrategyPage({ user, myBids, allBids, strategyDraft, setStrategyDraft, 
   // ─────────────────────────────────────────────────────────────
   if (view === "summary") {
     return (
-      <div style={{ padding:"28px" }}>
+      <div style={{ padding:"clamp(12px, 4vw, 28px)" }}>
         <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:24,flexWrap:"wrap" }}>
           <button onClick={()=>setView("edit")}
             style={{ padding:"8px 14px",background:"transparent",border:`1px solid ${C.border}`,
@@ -1830,7 +1886,7 @@ function StrategyPage({ user, myBids, allBids, strategyDraft, setStrategyDraft, 
   };
 
   return (
-    <div style={{ padding:"28px" }}>
+    <div style={{ padding:"clamp(12px, 4vw, 28px)" }}>
 
       {/* ── Header ── */}
       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,gap:12,flexWrap:"wrap" }}>
@@ -1894,7 +1950,7 @@ function StrategyPage({ user, myBids, allBids, strategyDraft, setStrategyDraft, 
         marginBottom:16,borderRadius:10,flexWrap:"wrap",
         background: bidStarted ? "rgba(34,197,94,.07)" : "rgba(59,130,246,.07)",
         border: `1px solid ${bidStarted ? C.green+"40" : C.blue+"40"}` }}>
-        <div style={{ flex:1,minWidth:200 }}>
+        <div style={{ flex:1,minWidth:"min(200px,100%)" }}>
           {bidStarted ? (
             <>
               <div style={{ fontSize:13,fontWeight:700,color:C.green }}>🟢 Strategy Active — Bids Submitted</div>
@@ -2119,7 +2175,7 @@ function StrategyPage({ user, myBids, allBids, strategyDraft, setStrategyDraft, 
                   </div>
 
                   {/* Bid allocation */}
-                  <div style={{ display:"flex",gap:8,alignItems:"center",flexShrink:0,minWidth:240 }}>
+                  <div style={{ display:"flex",gap:8,alignItems:"center",flexShrink:0,minWidth:"min(240px,100%)" }}>
                     <div style={{ width:30,textAlign:"right",fontSize:10,color:C.textDim,flexShrink:0 }}>{pct}%</div>
                     <div style={{ flex:1 }}>
                       <input type="range" min={0} max={termMaxInView} step={10} value={stratBid}
@@ -2251,7 +2307,7 @@ function ReviewsPage({ reviews,user,setReviewModal,setReviewDetailModal }) {
   },[reviews,filterTerm,search]);
 
   return (
-    <div style={{ padding:"28px" }}>
+    <div style={{ padding:"clamp(12px, 4vw, 28px)" }}>
       <div style={{ display:"flex",gap:10,marginBottom:20,flexWrap:"wrap" }}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
           style={{ flex:1,minWidth:160,padding:"9px 14px",background:C.surface,
@@ -2431,7 +2487,7 @@ function MyBidsPage({ user, allBids, allStudents, myBids, coursesVersion, strate
   };
 
   return (
-    <div style={{ padding:"28px" }}>
+    <div style={{ padding:"clamp(12px, 4vw, 28px)" }}>
 
       {/* Header */}
       <div style={{ marginBottom:20 }}>
@@ -2704,10 +2760,10 @@ function LeaderboardPage({ allBids, allStudents, rollToName, user, coursesVersio
       </div>
 
       {/* Two-pane layout */}
-      <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
+      <div style={{ display:"flex", gap:16, alignItems:"flex-start", flexWrap:"wrap" }}>
 
         {/* Subject list */}
-        <div style={{ width:280, flexShrink:0 }}>
+        <div style={{ width:"min(280px, 100%)", flexShrink:0 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.textDim, letterSpacing:1, marginBottom:10 }}>
             SUBJECTS · T{activeTerm} C{activeCluster}
           </div>
